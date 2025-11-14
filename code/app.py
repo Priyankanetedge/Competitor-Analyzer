@@ -6,28 +6,27 @@ import pandas as pd
 import time
 
 def get_enough_companies(description, keywords, min_required=5, max_attempts=10):
-    from utils.web_search import search_competitor_urls
-    from utils.scraper import is_company_homepage
-    import time
 
     seen_urls = set()
     valid_results = []
 
     for attempt in range(max_attempts):
         results = search_competitor_urls(description, keywords, max_results=10)
+        st.write("🔎 Raw Search Results:")
+        st.write([r["url"] for r in results])
+
         for r in results:
             url = r["url"]
             if url not in seen_urls and is_company_homepage(r):
                 valid_results.append(r)
                 seen_urls.add(url)
-
+            else:
+                st.write("❌ Rejected:", url)
         if len(valid_results) >= min_required:
-            return valid_results[:min_required]
-
+            break
         time.sleep(1)
 
-    return []  # NOT valid_results[:min_required]
-
+    return valid_results[:min_required]
 
 st.set_page_config(page_title="Competitor Analyzer", layout="wide")
 
@@ -55,12 +54,31 @@ if submitted:
         scraped_data = []
         st.info("🧽 Scraping competitor websites...")
         progress = st.progress(0)
-
         for i, result in enumerate(results):
             data = scrape_website(result["url"])
             if data:
                 scraped_data.append(data)
             progress.progress((i + 1) / len(results))
+        
+        MAX_RETRIES = 5
+        retry_count = 0
+
+        while len(scraped_data) < 5 and retry_count < MAX_RETRIES:
+            st.warning(f"Only {len(scraped_data)} valid competitors found. Retrying... (Attempt {retry_count + 1})")
+            
+            extra_results = get_enough_companies(description, keywords, min_required=5)
+            
+            for result in extra_results:
+                if result["url"] not in [x["url"] for x in results]:
+                    results.append(result)
+                    data = scrape_website(result["url"])
+                    if data:
+                        scraped_data.append(data)
+                
+                if len(scraped_data) >= 5:
+                    break  # ✅ Enough competitors found, no more retry needed
+
+            retry_count += 1
 
         if not scraped_data:
             st.error("❌ No valid competitors found.")
@@ -68,7 +86,7 @@ if submitted:
             st.success("✅ Found valid competitors! Ranking now...")
 
             ranked = rank_companies(description, keywords, scraped_data, top_n=5)
-                    
+
             # Display Top 5
             st.markdown("## 🏆 Top 5 Competitors")
             rows = []
@@ -77,8 +95,8 @@ if submitted:
                     st.markdown(f"### {idx}. **{comp['company_name']}**")
                     st.markdown(f"🔗 [Visit Website]({comp['url']})")
                     st.markdown(f"**Services:** {comp['services']}")
-                    st.markdown(f"**Keywords:** {comp['keywords']}")
-                    st.markdown(f"🔢 **Similarity Score:** {comp['score']:.2f}")
+                    st.markdown(f"**Keywords:** `{comp['keywords']}`")
+                    st.markdown(f"🔢 **Similarity Score:** `{comp['score']:.2f}`")
                     st.markdown("---")
                     # 👇 Prepare row for CSV
                     rows.append({
