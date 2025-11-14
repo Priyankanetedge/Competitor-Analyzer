@@ -22,7 +22,7 @@ def search_competitor_urls(description, keywords, max_results=100):
 import requests
 import random
 
-SERPER_API_KEY = "0f4dbb893ad9e2d330b8795238ee49f1214f4c8f"
+SERPER_API_KEY = "api_key"
 
 def search_competitor_urls(description, keywords, max_results=10):
     fuzz = random.choice(["", "AI", "latest", "product", "software", "new", "platform","tool","company",'organization'])
@@ -55,3 +55,4 @@ def search_competitor_urls(description, keywords, max_results=10):
         })
 
     return results
+
