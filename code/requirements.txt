@@ -4,5 +4,6 @@ duckduckgo-search
 sentence-transformers
 scikit-learn
 pandas
-newspaper3k
 trafilatura
+streamlit
+numpy
